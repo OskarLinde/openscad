@@ -22,6 +22,7 @@ namespace CGALUtils {
 		// Collect point cloud
 		std::list<CGAL_Polyhedron::Vertex::Point_3> points;
 		CGAL_Polyhedron P;
+		int t0 = time(NULL);
 		BOOST_FOREACH(const Geometry::ChildItem &item, children) {
 			const shared_ptr<const Geometry> &chgeom = item.second;
 			const CGAL_Nef_polyhedron *N = dynamic_cast<const CGAL_Nef_polyhedron *>(chgeom.get());
@@ -58,13 +59,28 @@ namespace CGALUtils {
 				}
 			}
 		}
+		int t1 = time(NULL);
+		/*if (t1-t0 > 2)*/ { PRINTB("Extracting (%d) vertices took: %d",points.size()%(t1-t0));  std::cout << "Extracting vertices took: " << (t1-t0) << std::endl;}
+		std::vector<CGAL_Polyhedron::Vertex::Point_3> unique_points;
 		if (points.size() > 0) {
+			Grid3d<int> grid(GRID_COARSE);
+			for (std::list<CGAL_Polyhedron::Vertex::Point_3>::iterator i = points.begin(); i != points.end(); ++i) {
+				double x = to_double(i->x()), y = to_double(i->y()), z = to_double(i->z());
+				int& v = grid.align(x,y,z);
+				if (v == 0) {
+					unique_points.push_back(CGAL_Polyhedron::Vertex::Point_3(x,y,z));
+					v = 1;
+				}
+			}
 			// Apply hull
 			if (points.size() > 3) {
-				CGAL::convex_hull_3(points.begin(), points.end(), result);
+				CGAL::convex_hull_3(unique_points.begin(), unique_points.end(), result);
+				int t2 = time(NULL);
+				/*if (t2-t1 > 2) */{ PRINTB("convex_hull_3 (%d pts): %d",unique_points.size() % (t2-t1)); }
+				std::cout << "convex_hull_3 (" << unique_points.size() << " took: " << (t2-t1) << std::endl;
 				return true;
 			}
-		}
+					}
 		return false;
 	}
 	
